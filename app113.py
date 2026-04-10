@@ -1,9 +1,4 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support.ui import WebDriverWait, Select
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
+from playwright.sync_api import sync_playwright
 from datetime import datetime
 import os
 import time
@@ -16,9 +11,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
 
-# ✅ Works both locally & Render
-download_path = "/tmp/downloads" if os.name != "nt" else r"E:\punch\downloads"
-
+download_path = "/tmp/downloads"
 if not os.path.exists(download_path):
     os.makedirs(download_path)
 
@@ -59,225 +52,124 @@ from_day = "1" if day <= 15 else "16"
 
 print(f"📅 Using From Date: {from_day}")
 
-# ---------------- CHROME SETUP ----------------
-options = Options()
-options.add_argument("--headless=new")
-options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1920,1080")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
+# ---------------- PLAYWRIGHT ----------------
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    context = browser.new_context(accept_downloads=True)
+    page = context.new_page()
 
-prefs = {
-    "download.default_directory": download_path,
-    "download.prompt_for_download": False,
-    "download.directory_upgrade": True,
-    "safebrowsing.enabled": True
-}
-options.add_experimental_option("prefs", prefs)
+    # ---------------- LOGIN ----------------
+    page.goto("http://203.92.32.167:8083/iclock/")
+    page.fill('input[type="text"]', USERNAME)
+    page.fill('input[type="password"]', PASSWORD)
+    page.click('input[value="Login"]')
 
-options.add_argument("--disable-notifications")
-options.add_argument("--disable-features=DownloadBubble")
+    print("✅ Login done")
+    page.wait_for_timeout(5000)
 
-# ✅ Auto detect Chrome (Render safe)
-chrome_paths = [
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-    "/usr/bin/google-chrome"
-]
+    # ---------------- MENU ----------------
+    page.hover("text=Reports")
+    page.click("text=Log Records")
+    print("📊 Clicked Log Records")
 
-chrome_path = None
-for path in chrome_paths:
-    if os.path.exists(path):
-        chrome_path = path
-        break
+    page.wait_for_timeout(8000)
 
-if chrome_path:
-    options.binary_location = chrome_path
-    print(f"✅ Using Chrome: {chrome_path}")
-else:
-    print("⚠️ Chrome not found, trying default (local PC)")
-
-# ✅ Start driver
-driver = webdriver.Chrome(options=options)
-
-# ✅ Enable download in headless
-driver.execute_cdp_cmd(
-    "Page.setDownloadBehavior",
-    {"behavior": "allow", "downloadPath": download_path}
-)
-
-driver.set_window_size(1920, 1080)
-wait = WebDriverWait(driver, 20)
-
-# ---------------- LOGIN ----------------
-driver.get("http://203.92.32.167:8083/iclock/")
-
-wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']"))).send_keys(USERNAME)
-wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='password']"))).send_keys(PASSWORD)
-wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Login']"))).click()
-
-print("✅ Login done")
-time.sleep(5)
-
-# ---------------- MENU ----------------
-actions = ActionChains(driver)
-
-for item in driver.find_elements(By.XPATH, "//td"):
-    if item.text.strip().lower() == "reports":
-        actions.move_to_element(item).perform()
-        break
-
-time.sleep(2)
-
-for item in driver.find_elements(By.XPATH, "//td"):
-    if "log records" in item.text.lower():
-        driver.execute_script("arguments[0].click();", item)
-        print("📊 Clicked Log Records")
-        break
-
-time.sleep(8)
-
-# ---------------- IFRAME ----------------
-def switch_to_report_iframe():
-    driver.switch_to.default_content()
-
-    for frame in driver.find_elements(By.TAG_NAME, "iframe"):
-        driver.switch_to.frame(frame)
-        time.sleep(2)
-
-        page = driver.page_source.lower()
-
-        if "log" in page or "report" in page:
-            print("✅ Report iframe found")
-            return True
-
-        driver.switch_to.default_content()
-
-    return False
-
-if not switch_to_report_iframe():
-    print("❌ Initial iframe not found")
-    driver.quit()
-    exit()
-
-# ---------------- DEVICE FILTER ----------------
-for cb in driver.find_elements(By.XPATH, "//input[@type='checkbox']"):
-    try:
-        if "device" in cb.find_element(By.XPATH, "..").text.lower():
-            driver.execute_script("arguments[0].click();", cb)
-            print("✅ Device filter enabled")
-            break
-    except:
-        pass
-
-time.sleep(2)
-
-# ---------------- SELECT BHAVANI ----------------
-for s in driver.find_elements(By.TAG_NAME, "select"):
-    try:
-        select = Select(s)
-        select.deselect_all()
-
-        for opt in select.options:
-            if opt.text.lower().startswith("bhavani"):
-                select.select_by_visible_text(opt.text)
-
-        driver.execute_script(
-            "arguments[0].dispatchEvent(new Event('change', {bubbles:true}))", s
-        )
-
-        print("✅ Selected Bhavani")
-        break
-    except:
-        pass
-
-time.sleep(2)
-
-# ---------------- DATE ----------------
-for s in driver.find_elements(By.TAG_NAME, "select"):
-    values = [o.text.strip() for o in s.find_elements(By.TAG_NAME, "option")]
-
-    if "1" in values and "31" in values:
-        for opt in s.find_elements(By.TAG_NAME, "option"):
-            if opt.text.strip() == from_day:
-                opt.click()
-                break
-
-        print(f"📅 From Date set to {from_day}")
-        break
-
-time.sleep(2)
-
-# ---------------- GENERATE ----------------
-for b in driver.find_elements(By.XPATH, "//input | //button"):
-    if "generate" in (b.get_attribute("value") or "").lower():
-        driver.execute_script("arguments[0].click();", b)
-        print("📊 Report generated")
-        break
-
-time.sleep(5)
-
-# ---------------- EXPORT ----------------
-print("⬇️ Finding Export button...")
-
-for el in driver.find_elements(By.XPATH, "//*[@onclick]"):
-    if "export" in (el.get_attribute("onclick") or "").lower():
-        driver.execute_script("arguments[0].click();", el)
-        print("✅ Export clicked")
-        break
-
-time.sleep(5)
-
-# ---------------- CLEAN ----------------
-for f in os.listdir(download_path):
-    if f.endswith((".xls", ".xlsx", ".csv")):
+    # ---------------- IFRAME ----------------
+    report_frame = None
+    for frame in page.frames:
         try:
-            os.remove(os.path.join(download_path, f))
+            if "log" in frame.content().lower() or "report" in frame.content().lower():
+                report_frame = frame
+                print("✅ Report iframe found")
+                break
         except:
             pass
 
-print("🧹 Old files cleared")
+    if not report_frame:
+        print("❌ Report iframe not found")
+        browser.close()
+        exit()
 
-# ---------------- WAIT ----------------
-latest_file = wait_for_download_complete(download_path)
+    # ---------------- DEVICE FILTER ----------------
+    try:
+        report_frame.locator('input[type="checkbox"]').first.check()
+        print("✅ Device filter enabled")
+    except:
+        pass
 
-if not latest_file:
-    print("❌ Download failed")
-    driver.quit()
-    exit()
+    # ---------------- SELECT BHAVANI ----------------
+    try:
+        selects = report_frame.locator("select").all()
+        for s in selects:
+            try:
+                options = s.locator("option").all_text_contents()
+                if len(options) > 5:
+                    for opt in options:
+                        if opt.lower().startswith("bhavani"):
+                            s.select_option(label=opt)
+                            print("✅ Selected Bhavani")
+                            break
+            except:
+                pass
+    except:
+        pass
 
-print("📂 Downloaded:", latest_file)
+    # ---------------- DATE SELECT ----------------
+    try:
+        selects = report_frame.locator("select").all()
+        for s in selects:
+            values = s.locator("option").all_text_contents()
+            if "1" in values and "31" in values:
+                s.select_option(label=from_day)
+                print(f"📅 From Date set to {from_day}")
+                break
+    except:
+        pass
 
-# ---------------- CONVERT ----------------
-month = datetime.now().strftime("%B").lower()
-target_name = f"{month}1.csv" if from_day == "1" else f"{month}2.csv"
-target_path = os.path.join(download_path, target_name)
+    # ---------------- GENERATE ----------------
+    try:
+        report_frame.locator('input[value="Generate"]').click()
+        print("📊 Report generated")
+    except:
+        pass
 
-if latest_file.endswith((".xls", ".xlsx")):
-    df = pd.read_excel(latest_file)
-    df.to_csv(target_path, index=False)
-    os.remove(latest_file)
-    print("✅ Converted")
-else:
-    target_path = latest_file
+    page.wait_for_timeout(5000)
 
-# ---------------- UPLOAD ----------------
-print("📤 Uploading...")
+    # ---------------- EXPORT ----------------
+    print("⬇️ Exporting file...")
 
-driver.get(UPLOAD_URL)
-time.sleep(3)
+    with page.expect_download() as download_info:
+        report_frame.locator("text=Export").first.click()
 
-try:
-    driver.find_element(By.NAME, "pin").send_keys(PIN)
-    driver.find_element(By.NAME, "csv_file").send_keys(target_path)
-    driver.find_element(By.NAME, "upload").click()
+    download = download_info.value
+    file_path = os.path.join(download_path, download.suggested_filename)
+    download.save_as(file_path)
+
+    print("📂 Downloaded:", file_path)
+
+    # ---------------- CONVERT ----------------
+    month = datetime.now().strftime("%B").lower()
+    target_name = f"{month}1.csv" if from_day == "1" else f"{month}2.csv"
+    target_path = os.path.join(download_path, target_name)
+
+    if file_path.endswith((".xls", ".xlsx")):
+        df = pd.read_excel(file_path)
+        df.to_csv(target_path, index=False)
+        os.remove(file_path)
+        print("✅ Converted")
+    else:
+        target_path = file_path
+
+    # ---------------- UPLOAD ----------------
+    print("📤 Uploading...")
+
+    page.goto(UPLOAD_URL)
+    page.fill('input[name="pin"]', PIN)
+    page.set_input_files('input[name="csv_file"]', target_path)
+    page.click('input[name="upload"]')
 
     print("✅ Upload submitted")
-    time.sleep(5)
+    page.wait_for_timeout(5000)
 
-except Exception as e:
-    print("❌ Upload error:", str(e))
-
-# ---------------- CLOSE ----------------
-driver.quit()
-print("🏁 DONE")
+    browser.close()
+    print("🏁 DONE")
