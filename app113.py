@@ -37,8 +37,8 @@ with sync_playwright() as p:
     # ---------------- LOGIN ----------------
     print("🌐 Opening Login Page...", flush=True)
 
-    page.goto("http://203.92.32.167:8083/iclock/", timeout=60000)
-
+    page.goto("http://203.92.32.167:8083/iclock/", timeout=60000, wait_until="domcontentloaded")
+page.wait_for_timeout(10000)
     # 🔥 WAIT PROPERLY (IMPORTANT FIX)
     page.wait_for_load_state("networkidle")
 
