@@ -10,14 +10,14 @@ import time
 import pandas as pd
 import sys
 
-# Encoding fix
 sys.stdout.reconfigure(encoding='utf-8')
 
 # ---------------- CONFIG ----------------
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
 
-download_path = "/tmp/downloads"
+# ✅ Works both locally & Render
+download_path = "/tmp/downloads" if os.name != "nt" else r"E:\punch\downloads"
 
 if not os.path.exists(download_path):
     os.makedirs(download_path)
@@ -59,36 +59,55 @@ from_day = "1" if day <= 15 else "16"
 
 print(f"📅 Using From Date: {from_day}")
 
-# ---------------- CHROME SETUP (FINAL FIX) ----------------
+# ---------------- CHROME SETUP ----------------
 options = Options()
 options.add_argument("--headless=new")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1920,1080")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
 
-# ✅ SET DOWNLOAD PATH
 prefs = {
     "download.default_directory": download_path,
     "download.prompt_for_download": False,
     "download.directory_upgrade": True,
+    "safebrowsing.enabled": True
 }
 options.add_experimental_option("prefs", prefs)
 
-# ✅ SET CHROME PATH (Render)
-options.binary_location = "/usr/bin/chromium"
+options.add_argument("--disable-notifications")
+options.add_argument("--disable-features=DownloadBubble")
 
-# ✅ START DRIVER (ONLY ONCE)
+# ✅ Auto detect Chrome (Render safe)
+chrome_paths = [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome"
+]
+
+chrome_path = None
+for path in chrome_paths:
+    if os.path.exists(path):
+        chrome_path = path
+        break
+
+if chrome_path:
+    options.binary_location = chrome_path
+    print(f"✅ Using Chrome: {chrome_path}")
+else:
+    print("⚠️ Chrome not found, trying default (local PC)")
+
+# ✅ Start driver
 driver = webdriver.Chrome(options=options)
 
-# Enable download in headless
+# ✅ Enable download in headless
 driver.execute_cdp_cmd(
     "Page.setDownloadBehavior",
     {"behavior": "allow", "downloadPath": download_path}
 )
 
 driver.set_window_size(1920, 1080)
-wait = WebDriverWait(driver, 60)
+wait = WebDriverWait(driver, 20)
 
 # ---------------- LOGIN ----------------
 driver.get("http://203.92.32.167:8083/iclock/")
@@ -126,7 +145,9 @@ def switch_to_report_iframe():
         driver.switch_to.frame(frame)
         time.sleep(2)
 
-        if "log" in driver.page_source.lower():
+        page = driver.page_source.lower()
+
+        if "log" in page or "report" in page:
             print("✅ Report iframe found")
             return True
 
@@ -151,7 +172,7 @@ for cb in driver.find_elements(By.XPATH, "//input[@type='checkbox']"):
 
 time.sleep(2)
 
-# ---------------- SELECT ----------------
+# ---------------- SELECT BHAVANI ----------------
 for s in driver.find_elements(By.TAG_NAME, "select"):
     try:
         select = Select(s)
@@ -161,6 +182,10 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
             if opt.text.lower().startswith("bhavani"):
                 select.select_by_visible_text(opt.text)
 
+        driver.execute_script(
+            "arguments[0].dispatchEvent(new Event('change', {bubbles:true}))", s
+        )
+
         print("✅ Selected Bhavani")
         break
     except:
@@ -168,7 +193,7 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
 
 time.sleep(2)
 
-# ---------------- DATE SELECT ----------------
+# ---------------- DATE ----------------
 for s in driver.find_elements(By.TAG_NAME, "select"):
     values = [o.text.strip() for o in s.find_elements(By.TAG_NAME, "option")]
 
@@ -176,6 +201,7 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
         for opt in s.find_elements(By.TAG_NAME, "option"):
             if opt.text.strip() == from_day:
                 opt.click()
+                break
 
         print(f"📅 From Date set to {from_day}")
         break
@@ -190,13 +216,6 @@ for b in driver.find_elements(By.XPATH, "//input | //button"):
         break
 
 time.sleep(5)
-
-print("🔄 Refreshing iframe...")
-
-if not switch_to_report_iframe():
-    print("❌ Report iframe not found")
-    driver.quit()
-    exit()
 
 # ---------------- EXPORT ----------------
 print("⬇️ Finding Export button...")
@@ -219,7 +238,7 @@ for f in os.listdir(download_path):
 
 print("🧹 Old files cleared")
 
-# ---------------- DOWNLOAD ----------------
+# ---------------- WAIT ----------------
 latest_file = wait_for_download_complete(download_path)
 
 if not latest_file:
