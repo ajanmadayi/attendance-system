@@ -1,5 +1,6 @@
 from flask import Flask, render_template, Response
 import subprocess
+import os
 
 app = Flask(__name__)
 
@@ -11,7 +12,7 @@ def home():
 def run_script():
     def generate():
         process = subprocess.Popen(
-            ["python", "-u", "app113.py"],  # 🔥 KEY FIX
+            ["python", "-u", "app113.py"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -24,5 +25,7 @@ def run_script():
 
     return Response(generate(), mimetype="text/event-stream")
 
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
