@@ -12,10 +12,10 @@ import time
 import pandas as pd
 import sys
 
-# ✅ Encoding fix
+# Encoding fix
 sys.stdout.reconfigure(encoding='utf-8')
 
-# ---------------- CONFIG ----------------
+# CONFIG
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
 
@@ -27,7 +27,7 @@ if not os.path.exists(download_path):
 UPLOAD_URL = "https://eportal.beplkhurja.in/uploadcsv.php"
 PIN = "1234"
 
-# ---------------- DOWNLOAD WAIT ----------------
+# WAIT DOWNLOAD
 def wait_for_download_complete(folder, timeout=180):
     print("⏳ Waiting for download...")
     start = time.time()
@@ -54,14 +54,14 @@ def wait_for_download_complete(folder, timeout=180):
 
         time.sleep(2)
 
-# ---------------- DATE ----------------
+# DATE
 today = datetime.now()
 day = today.day
 from_day = "1" if day <= 15 else "16"
 
 print(f"📅 Using From Date: {from_day}")
 
-# ---------------- CHROME SETUP (FINAL FIX) ----------------
+# CHROME SETUP (FINAL FIX)
 options = Options()
 options.add_argument("--headless=new")
 options.add_argument("--disable-gpu")
@@ -76,13 +76,14 @@ prefs = {
 }
 options.add_experimental_option("prefs", prefs)
 
-# ✅ IMPORTANT: DO NOT USE manual chromedriver path
+# IMPORTANT: Chromium path
+options.binary_location = "/usr/bin/chromium-browser"
+
 driver = webdriver.Chrome(
     service=Service(ChromeDriverManager().install()),
     options=options
 )
 
-# Enable download in headless
 driver.execute_cdp_cmd(
     "Page.setDownloadBehavior",
     {"behavior": "allow", "downloadPath": download_path}
@@ -91,7 +92,7 @@ driver.execute_cdp_cmd(
 driver.set_window_size(1920, 1080)
 wait = WebDriverWait(driver, 60)
 
-# ---------------- LOGIN ----------------
+# LOGIN
 driver.get("http://203.92.32.167:8083/iclock/")
 
 wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']"))).send_keys(USERNAME)
@@ -101,7 +102,7 @@ wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Login']"))).cl
 print("✅ Login done")
 time.sleep(5)
 
-# ---------------- MENU ----------------
+# MENU
 actions = ActionChains(driver)
 
 for item in driver.find_elements(By.XPATH, "//td"):
@@ -119,7 +120,7 @@ for item in driver.find_elements(By.XPATH, "//td"):
 
 time.sleep(8)
 
-# ---------------- IFRAME ----------------
+# IFRAME
 def switch_to_report_iframe():
     driver.switch_to.default_content()
 
@@ -140,7 +141,7 @@ if not switch_to_report_iframe():
     driver.quit()
     exit()
 
-# ---------------- DEVICE FILTER ----------------
+# DEVICE FILTER
 for cb in driver.find_elements(By.XPATH, "//input[@type='checkbox']"):
     try:
         if "device" in cb.find_element(By.XPATH, "..").text.lower():
@@ -152,7 +153,7 @@ for cb in driver.find_elements(By.XPATH, "//input[@type='checkbox']"):
 
 time.sleep(2)
 
-# ---------------- SELECT BHAVANI ----------------
+# SELECT
 for s in driver.find_elements(By.TAG_NAME, "select"):
     try:
         select = Select(s)
@@ -169,7 +170,7 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
 
 time.sleep(2)
 
-# ---------------- DATE ----------------
+# DATE SELECT
 for s in driver.find_elements(By.TAG_NAME, "select"):
     values = [o.text.strip() for o in s.find_elements(By.TAG_NAME, "option")]
 
@@ -183,7 +184,7 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
 
 time.sleep(2)
 
-# ---------------- GENERATE ----------------
+# GENERATE
 for b in driver.find_elements(By.XPATH, "//input | //button"):
     if "generate" in (b.get_attribute("value") or "").lower():
         driver.execute_script("arguments[0].click();", b)
@@ -199,7 +200,7 @@ if not switch_to_report_iframe():
     driver.quit()
     exit()
 
-# ---------------- EXPORT ----------------
+# EXPORT
 print("⬇️ Finding Export button...")
 
 for el in driver.find_elements(By.XPATH, "//*[@onclick]"):
@@ -210,7 +211,7 @@ for el in driver.find_elements(By.XPATH, "//*[@onclick]"):
 
 time.sleep(5)
 
-# ---------------- CLEAN OLD FILES ----------------
+# CLEAN
 for f in os.listdir(download_path):
     if f.endswith((".xls", ".xlsx", ".csv")):
         try:
@@ -220,7 +221,7 @@ for f in os.listdir(download_path):
 
 print("🧹 Old files cleared")
 
-# ---------------- WAIT DOWNLOAD ----------------
+# DOWNLOAD
 latest_file = wait_for_download_complete(download_path)
 
 if not latest_file:
@@ -230,7 +231,7 @@ if not latest_file:
 
 print("📂 Downloaded:", latest_file)
 
-# ---------------- CONVERT ----------------
+# CONVERT
 month = datetime.now().strftime("%B").lower()
 target_name = f"{month}1.csv" if from_day == "1" else f"{month}2.csv"
 target_path = os.path.join(download_path, target_name)
@@ -243,7 +244,7 @@ if latest_file.endswith((".xls", ".xlsx")):
 else:
     target_path = latest_file
 
-# ---------------- UPLOAD ----------------
+# UPLOAD
 print("📤 Uploading...")
 
 driver.get(UPLOAD_URL)
@@ -260,6 +261,6 @@ try:
 except Exception as e:
     print("❌ Upload error:", str(e))
 
-# ---------------- CLOSE ----------------
+# CLOSE
 driver.quit()
 print("🏁 DONE")
