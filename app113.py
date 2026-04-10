@@ -20,7 +20,7 @@ PIN = "1234"
 
 # ---------------- DOWNLOAD WAIT ----------------
 def wait_for_download_complete(folder, timeout=180):
-    print("⏳ Waiting for download...")
+    print("⏳ Waiting for download...", flush=True)
     start = time.time()
 
     while True:
@@ -40,7 +40,7 @@ def wait_for_download_complete(folder, timeout=180):
             return latest
 
         if time.time() - start > timeout:
-            print("❌ Download timeout")
+            print("❌ Download timeout", flush=True)
             return None
 
         time.sleep(2)
@@ -50,7 +50,7 @@ today = datetime.now()
 day = today.day
 from_day = "1" if day <= 15 else "16"
 
-print(f"📅 Using From Date: {from_day}")
+print(f"📅 Using From Date: {from_day}", flush=True)
 
 # ---------------- PLAYWRIGHT ----------------
 with sync_playwright() as p:
@@ -59,41 +59,47 @@ with sync_playwright() as p:
     page = context.new_page()
 
     # ---------------- LOGIN ----------------
+    print("🌐 Opening Login Page...", flush=True)
+
     page.goto("http://203.92.32.167:8083/iclock/")
+    page.wait_for_timeout(8000)
+
     page.fill('input[type="text"]', USERNAME)
     page.fill('input[type="password"]', PASSWORD)
     page.click('input[value="Login"]')
 
-    print("✅ Login done")
-    page.wait_for_timeout(5000)
+    print("✅ Login done", flush=True)
+
+    page.wait_for_timeout(8000)
 
     # ---------------- MENU ----------------
     page.hover("text=Reports")
     page.click("text=Log Records")
-    print("📊 Clicked Log Records")
+    print("📊 Clicked Log Records", flush=True)
 
-    page.wait_for_timeout(8000)
+    page.wait_for_timeout(10000)
 
     # ---------------- IFRAME ----------------
     report_frame = None
     for frame in page.frames:
         try:
-            if "log" in frame.content().lower() or "report" in frame.content().lower():
+            content = frame.content()
+            if content and ("log" in content.lower() or "report" in content.lower()):
                 report_frame = frame
-                print("✅ Report iframe found")
+                print("✅ Report iframe found", flush=True)
                 break
         except:
             pass
 
     if not report_frame:
-        print("❌ Report iframe not found")
+        print("❌ Report iframe not found", flush=True)
         browser.close()
         exit()
 
     # ---------------- DEVICE FILTER ----------------
     try:
         report_frame.locator('input[type="checkbox"]').first.check()
-        print("✅ Device filter enabled")
+        print("✅ Device filter enabled", flush=True)
     except:
         pass
 
@@ -103,12 +109,11 @@ with sync_playwright() as p:
         for s in selects:
             try:
                 options = s.locator("option").all_text_contents()
-                if len(options) > 5:
-                    for opt in options:
-                        if opt.lower().startswith("bhavani"):
-                            s.select_option(label=opt)
-                            print("✅ Selected Bhavani")
-                            break
+                for opt in options:
+                    if opt.lower().startswith("bhavani"):
+                        s.select_option(label=opt)
+                        print("✅ Selected Bhavani", flush=True)
+                        break
             except:
                 pass
     except:
@@ -121,7 +126,7 @@ with sync_playwright() as p:
             values = s.locator("option").all_text_contents()
             if "1" in values and "31" in values:
                 s.select_option(label=from_day)
-                print(f"📅 From Date set to {from_day}")
+                print(f"📅 From Date set to {from_day}", flush=True)
                 break
     except:
         pass
@@ -129,14 +134,14 @@ with sync_playwright() as p:
     # ---------------- GENERATE ----------------
     try:
         report_frame.locator('input[value="Generate"]').click()
-        print("📊 Report generated")
+        print("📊 Report generated", flush=True)
     except:
         pass
 
-    page.wait_for_timeout(5000)
+    page.wait_for_timeout(8000)
 
     # ---------------- EXPORT ----------------
-    print("⬇️ Exporting file...")
+    print("⬇️ Exporting file...", flush=True)
 
     with page.expect_download() as download_info:
         report_frame.locator("text=Export").first.click()
@@ -145,7 +150,7 @@ with sync_playwright() as p:
     file_path = os.path.join(download_path, download.suggested_filename)
     download.save_as(file_path)
 
-    print("📂 Downloaded:", file_path)
+    print("📂 Downloaded:", file_path, flush=True)
 
     # ---------------- CONVERT ----------------
     month = datetime.now().strftime("%B").lower()
@@ -156,20 +161,23 @@ with sync_playwright() as p:
         df = pd.read_excel(file_path)
         df.to_csv(target_path, index=False)
         os.remove(file_path)
-        print("✅ Converted")
+        print("✅ Converted", flush=True)
     else:
         target_path = file_path
 
     # ---------------- UPLOAD ----------------
-    print("📤 Uploading...")
+    print("📤 Uploading...", flush=True)
 
     page.goto(UPLOAD_URL)
+    page.wait_for_timeout(5000)
+
     page.fill('input[name="pin"]', PIN)
     page.set_input_files('input[name="csv_file"]', target_path)
     page.click('input[name="upload"]')
 
-    print("✅ Upload submitted")
+    print("✅ Upload submitted", flush=True)
+
     page.wait_for_timeout(5000)
 
     browser.close()
-    print("🏁 DONE")
+    print("🏁 DONE", flush=True)
