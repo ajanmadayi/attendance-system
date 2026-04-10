@@ -18,33 +18,6 @@ if not os.path.exists(download_path):
 UPLOAD_URL = "https://eportal.beplkhurja.in/uploadcsv.php"
 PIN = "1234"
 
-# ---------------- DOWNLOAD WAIT ----------------
-def wait_for_download_complete(folder, timeout=180):
-    print("⏳ Waiting for download...", flush=True)
-    start = time.time()
-
-    while True:
-        files = os.listdir(folder)
-
-        if any(f.endswith(".crdownload") for f in files):
-            time.sleep(2)
-            continue
-
-        valid = [f for f in files if f.endswith((".xls", ".xlsx", ".csv"))]
-
-        if valid:
-            latest = max(
-                [os.path.join(folder, f) for f in valid],
-                key=os.path.getctime
-            )
-            return latest
-
-        if time.time() - start > timeout:
-            print("❌ Download timeout", flush=True)
-            return None
-
-        time.sleep(2)
-
 # ---------------- DATE ----------------
 today = datetime.now()
 day = today.day
@@ -58,23 +31,41 @@ with sync_playwright() as p:
     context = browser.new_context(accept_downloads=True)
     page = context.new_page()
 
+    # 🔥 IMPORTANT GLOBAL TIMEOUT
+    page.set_default_timeout(60000)
+
     # ---------------- LOGIN ----------------
     print("🌐 Opening Login Page...", flush=True)
 
-    page.goto("http://203.92.32.167:8083/iclock/")
-    page.wait_for_timeout(8000)
+    page.goto("http://203.92.32.167:8083/iclock/", timeout=60000)
+
+    # 🔥 WAIT PROPERLY (IMPORTANT FIX)
+    page.wait_for_load_state("networkidle")
+
+    print("✅ Page Loaded", flush=True)
+
+    # 🔥 WAIT FOR INPUT FIELD (CRITICAL FIX)
+    page.wait_for_selector('input[type="text"]')
+
+    print("🔐 Entering Credentials...", flush=True)
 
     page.fill('input[type="text"]', USERNAME)
     page.fill('input[type="password"]', PASSWORD)
+
     page.click('input[value="Login"]')
 
-    print("✅ Login done", flush=True)
+    print("✅ Login Clicked", flush=True)
 
+    # 🔥 WAIT AFTER LOGIN
+    page.wait_for_load_state("networkidle")
     page.wait_for_timeout(8000)
 
     # ---------------- MENU ----------------
+    print("📊 Opening Reports...", flush=True)
+
     page.hover("text=Reports")
     page.click("text=Log Records")
+
     print("📊 Clicked Log Records", flush=True)
 
     page.wait_for_timeout(10000)
@@ -107,15 +98,12 @@ with sync_playwright() as p:
     try:
         selects = report_frame.locator("select").all()
         for s in selects:
-            try:
-                options = s.locator("option").all_text_contents()
-                for opt in options:
-                    if opt.lower().startswith("bhavani"):
-                        s.select_option(label=opt)
-                        print("✅ Selected Bhavani", flush=True)
-                        break
-            except:
-                pass
+            options = s.locator("option").all_text_contents()
+            for opt in options:
+                if opt.lower().startswith("bhavani"):
+                    s.select_option(label=opt)
+                    print("✅ Selected Bhavani", flush=True)
+                    break
     except:
         pass
 
