@@ -4,18 +4,22 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
 from datetime import datetime
 import os
 import time
 import pandas as pd
 import sys
+
+# ✅ Encoding fix
 sys.stdout.reconfigure(encoding='utf-8')
+
+# ---------------- CONFIG ----------------
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
 
-download_path = r"E:\punch\downloads"
+# ✅ FIXED for Render (NO Windows path)
+download_path = "/tmp/downloads"
 
 if not os.path.exists(download_path):
     os.makedirs(download_path)
@@ -31,14 +35,7 @@ def wait_for_download_complete(folder, timeout=180):
     while True:
         files = os.listdir(folder)
 
-        # 🔥 Only check NEW files (recent 2 minutes)
-        now = time.time()
-        recent_files = [
-            f for f in files
-            if now - os.path.getctime(os.path.join(folder, f)) < 120
-        ]
-
-        if any(f.endswith(".crdownload") for f in recent_files):
+        if any(f.endswith(".crdownload") for f in files):
             time.sleep(2)
             continue
 
@@ -64,10 +61,8 @@ from_day = "1" if day <= 15 else "16"
 
 print(f"📅 Using From Date: {from_day}")
 
-# ---------------- CHROME ----------------
+# ---------------- CHROME SETUP (RENDER FIX) ----------------
 options = Options()
-
-# 🔥 HEADLESS (NO BROWSER OPEN)
 options.add_argument("--headless=new")
 options.add_argument("--disable-gpu")
 options.add_argument("--window-size=1920,1080")
@@ -78,25 +73,21 @@ prefs = {
     "download.default_directory": download_path,
     "download.prompt_for_download": False,
     "download.directory_upgrade": True,
-    "safebrowsing.enabled": True
 }
 options.add_experimental_option("prefs", prefs)
 
-options.add_argument("--disable-notifications")
-options.add_argument("--disable-features=DownloadBubble")
+# ✅ IMPORTANT PATHS FOR RENDER
+options.binary_location = "/usr/bin/chromium-browser"
 
 driver = webdriver.Chrome(
-    service=Service(ChromeDriverManager().install()),
+    service=Service("/usr/bin/chromedriver"),
     options=options
 )
 
-# 🔥 KEEP FIX (CRITICAL)
+# Enable download in headless
 driver.execute_cdp_cmd(
     "Page.setDownloadBehavior",
-    {
-        "behavior": "allow",
-        "downloadPath": download_path
-    }
+    {"behavior": "allow", "downloadPath": download_path}
 )
 
 driver.set_window_size(1920, 1080)
@@ -138,9 +129,7 @@ def switch_to_report_iframe():
         driver.switch_to.frame(frame)
         time.sleep(2)
 
-        page = driver.page_source.lower()
-
-        if "log" in page or "report" in page:
+        if "log" in driver.page_source.lower():
             print("✅ Report iframe found")
             return True
 
@@ -167,29 +156,22 @@ time.sleep(2)
 
 # ---------------- SELECT BHAVANI ----------------
 for s in driver.find_elements(By.TAG_NAME, "select"):
-    options_list = s.find_elements(By.TAG_NAME, "option")
+    try:
+        select = Select(s)
+        select.deselect_all()
 
-    if len(options_list) > 5:
-        try:
-            select = Select(s)
-            select.deselect_all()
+        for opt in select.options:
+            if opt.text.lower().startswith("bhavani"):
+                select.select_by_visible_text(opt.text)
 
-            for opt in select.options:
-                if opt.text.lower().startswith("bhavani"):
-                    select.select_by_visible_text(opt.text)
-
-            driver.execute_script(
-                "arguments[0].dispatchEvent(new Event('change', {bubbles:true}))", s
-            )
-
-            print("✅ Selected Bhavani")
-            break
-        except:
-            pass
+        print("✅ Selected Bhavani")
+        break
+    except:
+        pass
 
 time.sleep(2)
 
-# ---------------- DATE SELECT ----------------
+# ---------------- DATE ----------------
 for s in driver.find_elements(By.TAG_NAME, "select"):
     values = [o.text.strip() for o in s.find_elements(By.TAG_NAME, "option")]
 
@@ -197,11 +179,6 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
         for opt in s.find_elements(By.TAG_NAME, "option"):
             if opt.text.strip() == from_day:
                 opt.click()
-                break
-
-        driver.execute_script(
-            "arguments[0].dispatchEvent(new Event('change', {bubbles:true}))", s
-        )
 
         print(f"📅 From Date set to {from_day}")
         break
@@ -217,7 +194,6 @@ for b in driver.find_elements(By.XPATH, "//input | //button"):
 
 time.sleep(5)
 
-# ---------------- REFRESH IFRAME ----------------
 print("🔄 Refreshing iframe...")
 
 if not switch_to_report_iframe():
@@ -228,43 +204,14 @@ if not switch_to_report_iframe():
 # ---------------- EXPORT ----------------
 print("⬇️ Finding Export button...")
 
-export_btn = None
-
 for el in driver.find_elements(By.XPATH, "//*[@onclick]"):
     if "export" in (el.get_attribute("onclick") or "").lower():
-        export_btn = el
+        driver.execute_script("arguments[0].click();", el)
+        print("✅ Export clicked")
         break
-
-if not export_btn:
-    for el in driver.find_elements(By.XPATH, "//*[@href]"):
-        if "export" in (el.get_attribute("href") or "").lower():
-            export_btn = el
-            break
-
-if not export_btn:
-    for el in driver.find_elements(By.XPATH, "//img"):
-        if "export" in ((el.get_attribute("alt") or "") + (el.get_attribute("title") or "")).lower():
-            export_btn = el
-            break
-
-if not export_btn:
-    print("❌ Export button NOT found")
-    driver.quit()
-    exit()
-
-driver.execute_script("arguments[0].click();", export_btn)
-print("✅ Export clicked")
 
 time.sleep(5)
 
-# ---------------- EXCEL ----------------
-print("⬇️ Selecting Excel...")
-
-for el in driver.find_elements(By.XPATH, "//*"):
-    if "excel" in (el.text or "").lower():
-        driver.execute_script("arguments[0].click();", el)
-        print("✅ Excel selected")
-        break
 # ---------------- CLEAN OLD FILES ----------------
 for f in os.listdir(download_path):
     if f.endswith((".xls", ".xlsx", ".csv")):
@@ -274,6 +221,7 @@ for f in os.listdir(download_path):
             pass
 
 print("🧹 Old files cleared")
+
 # ---------------- WAIT DOWNLOAD ----------------
 latest_file = wait_for_download_complete(download_path)
 
@@ -297,37 +245,19 @@ if latest_file.endswith((".xls", ".xlsx")):
 else:
     target_path = latest_file
 
-# ---------------- UPLOAD VIA SELENIUM ----------------
-print("📤 Uploading via browser...")
+# ---------------- UPLOAD ----------------
+print("📤 Uploading...")
 
-driver.get("https://eportal.beplkhurja.in/uploadcsv.php")
-
+driver.get(UPLOAD_URL)
 time.sleep(3)
 
 try:
-    # PIN input
-    pin_input = driver.find_element(By.NAME, "pin")
-    pin_input.clear()
-    pin_input.send_keys(PIN)
-
-    # File upload
-    file_input = driver.find_element(By.NAME, "csv_file")
-    file_input.send_keys(target_path)
-
-    # Click Upload button
-    upload_btn = driver.find_element(By.NAME, "upload")
-    upload_btn.click()
+    driver.find_element(By.NAME, "pin").send_keys(PIN)
+    driver.find_element(By.NAME, "csv_file").send_keys(target_path)
+    driver.find_element(By.NAME, "upload").click()
 
     print("✅ Upload submitted")
-
     time.sleep(5)
-
-    # Optional: print page result
-    print("📤 Page Response:")
-    print(driver.page_source[:500])
-
-except Exception as e:
-    print("❌ Upload error:", str(e))
 
 except Exception as e:
     print("❌ Upload error:", str(e))
