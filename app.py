@@ -28,8 +28,4 @@ def run_script():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-<<<<<<< HEAD
     app.run(host="0.0.0.0", port=port)
-=======
-    app.run(host="0.0.0.0", port=port)
->>>>>>> 05f512d10441541fdfdb191e272c8e7f257f6746
