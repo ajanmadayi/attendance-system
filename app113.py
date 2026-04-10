@@ -1,6 +1,5 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
@@ -10,6 +9,7 @@ import os
 import time
 import pandas as pd
 import sys
+import chromedriver_autoinstaller
 
 # Encoding fix
 sys.stdout.reconfigure(encoding='utf-8')
@@ -61,6 +61,10 @@ from_day = "1" if day <= 15 else "16"
 print(f"📅 Using From Date: {from_day}")
 
 # ---------------- CHROME SETUP (FINAL FIX) ----------------
+
+# ✅ AUTO INSTALL DRIVER
+chromedriver_autoinstaller.install()
+
 options = Options()
 options.add_argument("--headless=new")
 options.add_argument("--no-sandbox")
@@ -75,19 +79,14 @@ prefs = {
 }
 options.add_experimental_option("prefs", prefs)
 
-# ✅ FINAL SAFE CHROME PATH (AUTO DETECT)
-chrome_binary = "/usr/bin/chromium"
-chromedriver_path = "/usr/bin/chromedriver"
+# ✅ AUTO DETECT CHROME
+if os.path.exists("/usr/bin/chromium"):
+    options.binary_location = "/usr/bin/chromium"
+elif os.path.exists("/usr/bin/google-chrome"):
+    options.binary_location = "/usr/bin/google-chrome"
 
-if not os.path.exists(chrome_binary):
-    chrome_binary = "/usr/bin/google-chrome"
-
-options.binary_location = chrome_binary
-
-driver = webdriver.Chrome(
-    service=Service(chromedriver_path),
-    options=options
-)
+# ✅ START DRIVER (NO PATH NEEDED)
+driver = webdriver.Chrome(options=options)
 
 # Enable download in headless
 driver.execute_cdp_cmd(
