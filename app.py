@@ -4,6 +4,11 @@ import os
 
 app = Flask(__name__)
 
+# 🔥 FORCE BROWSER INSTALL
+if not os.path.exists("/opt/render/.cache/ms-playwright"):
+    print("⬇️ Installing Playwright browser...", flush=True)
+    os.system("python -m playwright install chromium")
+
 @app.route("/")
 def home():
     return render_template("index.html")
