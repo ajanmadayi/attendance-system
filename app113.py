@@ -9,7 +9,6 @@ import os
 import time
 import pandas as pd
 import sys
-import chromedriver_autoinstaller
 
 # Encoding fix
 sys.stdout.reconfigure(encoding='utf-8')
@@ -61,29 +60,25 @@ from_day = "1" if day <= 15 else "16"
 print(f"📅 Using From Date: {from_day}")
 
 # ---------------- CHROME SETUP (FINAL FIX) ----------------
-
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-
 options = Options()
 options.add_argument("--headless=new")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1920,1080")
 
-# ✅ Chromium path
+# ✅ SET DOWNLOAD PATH
+prefs = {
+    "download.default_directory": download_path,
+    "download.prompt_for_download": False,
+    "download.directory_upgrade": True,
+}
+options.add_experimental_option("prefs", prefs)
+
+# ✅ SET CHROME PATH (Render)
 options.binary_location = "/usr/bin/chromium"
 
-driver = webdriver.Chrome(options=options)
-
-
-# ✅ AUTO DETECT CHROME
-if os.path.exists("/usr/bin/chromium"):
-    options.binary_location = "/usr/bin/chromium"
-elif os.path.exists("/usr/bin/google-chrome"):
-    options.binary_location = "/usr/bin/google-chrome"
-
-# ✅ START DRIVER (NO PATH NEEDED)
+# ✅ START DRIVER (ONLY ONCE)
 driver = webdriver.Chrome(options=options)
 
 # Enable download in headless
