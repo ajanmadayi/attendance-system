@@ -1,3 +1,11 @@
-buildCommand: |
-  pip install -r requirements.txt
-  playwright install chromium
+services:
+  - type: web
+    name: punchonline
+    env: python
+    plan: free
+
+    buildCommand: |
+      pip install -r requirements.txt
+      playwright install chromium
+
+    startCommand: gunicorn app:app

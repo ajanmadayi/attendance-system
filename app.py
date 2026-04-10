@@ -4,10 +4,6 @@ import os
 
 app = Flask(__name__)
 
-# 🔥 Ensure Playwright browser exists
-if not os.path.exists("/opt/render/.cache/ms-playwright"):
-    os.system("python -m playwright install chromium")
-
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -19,9 +15,7 @@ def run_script():
             ["python", "-u", "app113.py"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="ignore"
+            text=True
         )
 
         for line in process.stdout:
