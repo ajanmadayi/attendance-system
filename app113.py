@@ -5,6 +5,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 import os
 import time
@@ -18,7 +19,6 @@ sys.stdout.reconfigure(encoding='utf-8')
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
 
-# ✅ FIXED for Render (NO Windows path)
 download_path = "/tmp/downloads"
 
 if not os.path.exists(download_path):
@@ -61,7 +61,7 @@ from_day = "1" if day <= 15 else "16"
 
 print(f"📅 Using From Date: {from_day}")
 
-# ---------------- CHROME SETUP (RENDER FIX) ----------------
+# ---------------- CHROME SETUP (FINAL FIX) ----------------
 options = Options()
 options.add_argument("--headless=new")
 options.add_argument("--disable-gpu")
@@ -76,11 +76,9 @@ prefs = {
 }
 options.add_experimental_option("prefs", prefs)
 
-# ✅ IMPORTANT PATHS FOR RENDER
-options.binary_location = "/usr/bin/chromium-browser"
-
+# ✅ IMPORTANT: DO NOT USE manual chromedriver path
 driver = webdriver.Chrome(
-    service=Service("/usr/bin/chromedriver"),
+    service=Service(ChromeDriverManager().install()),
     options=options
 )
 
