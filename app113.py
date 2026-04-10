@@ -5,7 +5,6 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
 from datetime import datetime
 import os
 import time
@@ -15,7 +14,7 @@ import sys
 # Encoding fix
 sys.stdout.reconfigure(encoding='utf-8')
 
-# CONFIG
+# ---------------- CONFIG ----------------
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
 
@@ -27,7 +26,7 @@ if not os.path.exists(download_path):
 UPLOAD_URL = "https://eportal.beplkhurja.in/uploadcsv.php"
 PIN = "1234"
 
-# WAIT DOWNLOAD
+# ---------------- DOWNLOAD WAIT ----------------
 def wait_for_download_complete(folder, timeout=180):
     print("⏳ Waiting for download...")
     start = time.time()
@@ -54,20 +53,20 @@ def wait_for_download_complete(folder, timeout=180):
 
         time.sleep(2)
 
-# DATE
+# ---------------- DATE ----------------
 today = datetime.now()
 day = today.day
 from_day = "1" if day <= 15 else "16"
 
 print(f"📅 Using From Date: {from_day}")
 
-# CHROME SETUP (FINAL FIX)
+# ---------------- CHROME SETUP (FINAL FIX) ----------------
 options = Options()
 options.add_argument("--headless=new")
-options.add_argument("--disable-gpu")
-options.add_argument("--window-size=1920,1080")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--disable-gpu")
+options.add_argument("--window-size=1920,1080")
 
 prefs = {
     "download.default_directory": download_path,
@@ -76,14 +75,21 @@ prefs = {
 }
 options.add_experimental_option("prefs", prefs)
 
-# IMPORTANT: Chromium path
-options.binary_location = "/usr/bin/chromium-browser"
+# ✅ FINAL SAFE CHROME PATH (AUTO DETECT)
+chrome_binary = "/usr/bin/chromium"
+chromedriver_path = "/usr/bin/chromedriver"
+
+if not os.path.exists(chrome_binary):
+    chrome_binary = "/usr/bin/google-chrome"
+
+options.binary_location = chrome_binary
 
 driver = webdriver.Chrome(
-    service=Service(ChromeDriverManager().install()),
+    service=Service(chromedriver_path),
     options=options
 )
 
+# Enable download in headless
 driver.execute_cdp_cmd(
     "Page.setDownloadBehavior",
     {"behavior": "allow", "downloadPath": download_path}
@@ -92,7 +98,7 @@ driver.execute_cdp_cmd(
 driver.set_window_size(1920, 1080)
 wait = WebDriverWait(driver, 60)
 
-# LOGIN
+# ---------------- LOGIN ----------------
 driver.get("http://203.92.32.167:8083/iclock/")
 
 wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']"))).send_keys(USERNAME)
@@ -102,7 +108,7 @@ wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Login']"))).cl
 print("✅ Login done")
 time.sleep(5)
 
-# MENU
+# ---------------- MENU ----------------
 actions = ActionChains(driver)
 
 for item in driver.find_elements(By.XPATH, "//td"):
@@ -120,7 +126,7 @@ for item in driver.find_elements(By.XPATH, "//td"):
 
 time.sleep(8)
 
-# IFRAME
+# ---------------- IFRAME ----------------
 def switch_to_report_iframe():
     driver.switch_to.default_content()
 
@@ -141,7 +147,7 @@ if not switch_to_report_iframe():
     driver.quit()
     exit()
 
-# DEVICE FILTER
+# ---------------- DEVICE FILTER ----------------
 for cb in driver.find_elements(By.XPATH, "//input[@type='checkbox']"):
     try:
         if "device" in cb.find_element(By.XPATH, "..").text.lower():
@@ -153,7 +159,7 @@ for cb in driver.find_elements(By.XPATH, "//input[@type='checkbox']"):
 
 time.sleep(2)
 
-# SELECT
+# ---------------- SELECT ----------------
 for s in driver.find_elements(By.TAG_NAME, "select"):
     try:
         select = Select(s)
@@ -170,7 +176,7 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
 
 time.sleep(2)
 
-# DATE SELECT
+# ---------------- DATE SELECT ----------------
 for s in driver.find_elements(By.TAG_NAME, "select"):
     values = [o.text.strip() for o in s.find_elements(By.TAG_NAME, "option")]
 
@@ -184,7 +190,7 @@ for s in driver.find_elements(By.TAG_NAME, "select"):
 
 time.sleep(2)
 
-# GENERATE
+# ---------------- GENERATE ----------------
 for b in driver.find_elements(By.XPATH, "//input | //button"):
     if "generate" in (b.get_attribute("value") or "").lower():
         driver.execute_script("arguments[0].click();", b)
@@ -200,7 +206,7 @@ if not switch_to_report_iframe():
     driver.quit()
     exit()
 
-# EXPORT
+# ---------------- EXPORT ----------------
 print("⬇️ Finding Export button...")
 
 for el in driver.find_elements(By.XPATH, "//*[@onclick]"):
@@ -211,7 +217,7 @@ for el in driver.find_elements(By.XPATH, "//*[@onclick]"):
 
 time.sleep(5)
 
-# CLEAN
+# ---------------- CLEAN ----------------
 for f in os.listdir(download_path):
     if f.endswith((".xls", ".xlsx", ".csv")):
         try:
@@ -221,7 +227,7 @@ for f in os.listdir(download_path):
 
 print("🧹 Old files cleared")
 
-# DOWNLOAD
+# ---------------- DOWNLOAD ----------------
 latest_file = wait_for_download_complete(download_path)
 
 if not latest_file:
@@ -231,7 +237,7 @@ if not latest_file:
 
 print("📂 Downloaded:", latest_file)
 
-# CONVERT
+# ---------------- CONVERT ----------------
 month = datetime.now().strftime("%B").lower()
 target_name = f"{month}1.csv" if from_day == "1" else f"{month}2.csv"
 target_path = os.path.join(download_path, target_name)
@@ -244,7 +250,7 @@ if latest_file.endswith((".xls", ".xlsx")):
 else:
     target_path = latest_file
 
-# UPLOAD
+# ---------------- UPLOAD ----------------
 print("📤 Uploading...")
 
 driver.get(UPLOAD_URL)
@@ -261,6 +267,6 @@ try:
 except Exception as e:
     print("❌ Upload error:", str(e))
 
-# CLOSE
+# ---------------- CLOSE ----------------
 driver.quit()
 print("🏁 DONE")
