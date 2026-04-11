@@ -8,9 +8,6 @@ app = Flask(__name__)
 # ✅ Ensure UTF-8 logs
 sys.stdout.reconfigure(encoding='utf-8')
 
-# ✅ IMPORTANT: Correct Playwright path (Render fix)
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/opt/render/project/.cache/playwright"
-
 
 # ✅ Home page
 @app.route("/")
@@ -54,7 +51,7 @@ def health():
     return "OK", 200
 
 
-# ✅ Local run (Render uses gunicorn)
+# ✅ Local run (Render uses Gunicorn)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
