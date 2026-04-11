@@ -10,12 +10,11 @@ with sync_playwright() as p:
     print("🚀 Launching browser...", flush=True)
 
     browser = p.chromium.launch(
-        headless=True,
+        headless=False,   # 🔥 KEY FIX (disable headless shell)
         args=[
             "--no-sandbox",
             "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--disable-setuid-sandbox"
+            "--disable-gpu"
         ]
     )
 
