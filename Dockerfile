@@ -1,7 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:v1.43.0-jammy
-
-# 🔥 FORCE REBUILD (IMPORTANT)
-RUN echo "FORCE REBUILD 123"
+FROM mcr.microsoft.com/playwright/python:v1.58.0-jammy
 
 WORKDIR /app
 
