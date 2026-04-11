@@ -6,8 +6,8 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 🔥 INSTALL BROWSER (THIS IS THE MISSING PART)
-RUN playwright install chromium
+# 🔥 INSTALL ALL REQUIRED BROWSERS (CRITICAL)
+RUN playwright install
 
 COPY . .
 
