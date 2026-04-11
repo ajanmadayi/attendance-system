@@ -2,5 +2,4 @@ flask
 gunicorn
 selenium
 webdriver-manager
-pandas
-openpyxl
+playwright
