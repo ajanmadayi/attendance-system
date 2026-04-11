@@ -1,7 +1,11 @@
 from playwright.sync_api import sync_playwright
+import os
 import sys
 
 sys.stdout.reconfigure(encoding='utf-8')
+
+# 🔥 FORCE Playwright to use global browser path
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
 
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
@@ -10,7 +14,7 @@ with sync_playwright() as p:
     print("🚀 Launching browser...", flush=True)
 
     browser = p.chromium.launch(
-        headless=False,   # 🔥 KEY FIX (disable headless shell)
+        headless=True,
         args=[
             "--no-sandbox",
             "--disable-dev-shm-usage",
