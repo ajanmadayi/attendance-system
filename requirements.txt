@@ -1,4 +1,6 @@
 flask
 gunicorn
-selenium
-webdriver-manager
+playwright
+pandas
+openpyxl
+# force rebuild
