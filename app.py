@@ -8,6 +8,9 @@ app = Flask(__name__)
 # UTF-8 logs
 sys.stdout.reconfigure(encoding='utf-8')
 
+# 🔥 FORCE correct browser path globally
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+
 
 @app.route("/")
 def home():
@@ -26,7 +29,8 @@ def run_script():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                env=os.environ  # 🔥 VERY IMPORTANT
             )
 
             for line in iter(process.stdout.readline, ''):
