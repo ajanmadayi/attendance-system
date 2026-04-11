@@ -1,15 +1,28 @@
-from playwright.sync_api import sync_playwright
-import time
 import os
+import glob
+import time
+from playwright.sync_api import sync_playwright
+
+# 🔥 FORCE CORRECT PLAYWRIGHT PATH (VERY IMPORTANT)
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/ms-playwright"
 
 print("📅 Using From Date: 1", flush=True)
 
 try:
     print("🚀 Launching browser...", flush=True)
 
+    # 🔍 AUTO-DETECT CHROMIUM PATH
+    chrome_paths = glob.glob("/ms-playwright/chromium-*/chrome-linux/chrome")
+    if not chrome_paths:
+        raise Exception("❌ Chromium not found in /ms-playwright")
+
+    chrome_path = chrome_paths[0]
+    print(f"✅ Using Chromium: {chrome_path}", flush=True)
+
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
+            executable_path=chrome_path,
             args=[
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
@@ -21,7 +34,7 @@ try:
         context = browser.new_context()
         page = context.new_page()
 
-        # 🔥 OPEN LOGIN PAGE
+        # 🌐 OPEN LOGIN PAGE
         print("🌐 Opening Login Page...", flush=True)
         page.goto("http://203.92.32.167:8083/iclock/", timeout=60000)
 
@@ -32,7 +45,6 @@ try:
         page.click('button[type="submit"]')
 
         page.wait_for_timeout(5000)
-
         print("✅ Login done", flush=True)
 
         # 📊 CLICK LOG RECORDS
@@ -41,25 +53,21 @@ try:
 
         page.wait_for_timeout(5000)
 
-        # 🔍 SWITCH TO IFRAME (IMPORTANT)
+        # 🔍 SWITCH TO IFRAME
         iframe = page.frame_locator("iframe")
-
         print("✅ Report iframe found", flush=True)
 
         # 🔧 DEVICE FILTER
         iframe.locator('input[placeholder="Search"]').fill("Bhavani")
         iframe.locator("text=Bhavani").click()
-
         print("✅ Device filter enabled", flush=True)
 
         # 📅 SET DATE
         iframe.locator('input[name="from_date"]').fill("1")
-
         print("📅 From Date set to 1", flush=True)
 
         # 📊 GENERATE REPORT
         iframe.locator("text=Search").click()
-
         print("📊 Report generated", flush=True)
 
         page.wait_for_timeout(5000)
@@ -75,7 +83,6 @@ try:
         page.wait_for_timeout(2000)
 
         iframe.locator("text=Excel").click()
-
         print("⬇️ Selecting Excel...", flush=True)
 
         print("⏳ Waiting for download...", flush=True)
