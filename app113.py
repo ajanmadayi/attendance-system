@@ -1,13 +1,10 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 import time
 
-print("📅 Using From Date: 1", flush=True)
+print("🚀 Testing Gmail...", flush=True)
 
 try:
-    print("🚀 Launching browser...", flush=True)
-
     options = Options()
     options.binary_location = "/usr/bin/chromium"
 
@@ -17,53 +14,12 @@ try:
 
     driver = webdriver.Chrome(options=options)
 
-    print("🌐 Opening Login Page...", flush=True)
-    driver.get("http://203.92.32.167:8083/iclock/")
-
-    time.sleep(3)
-
-    # 🔐 LOGIN
-    print("🔐 Entering credentials...", flush=True)
-    driver.find_element(By.NAME, "username").send_keys("admin")
-    driver.find_element(By.NAME, "password").send_keys("admin")
-    driver.find_element(By.XPATH, "//button").click()
-
-    time.sleep(5)
-    print("✅ Login done", flush=True)
-
-    # 📊 CLICK LOG RECORDS
-    driver.find_element(By.LINK_TEXT, "Log Records").click()
-    time.sleep(5)
-
-    # 🔁 SWITCH TO IFRAME
-    iframe = driver.find_element(By.TAG_NAME, "iframe")
-    driver.switch_to.frame(iframe)
-
-    # 🔍 FILTER DEVICE
-    search_box = driver.find_element(By.XPATH, "//input[@placeholder='Search']")
-    search_box.send_keys("Bhavani")
-    time.sleep(2)
-
-    driver.find_element(By.XPATH, "//*[contains(text(),'Bhavani')]").click()
-
-    # 📅 SET DATE
-    date_input = driver.find_element(By.NAME, "from_date")
-    date_input.clear()
-    date_input.send_keys("1")
-
-    # 🔎 SEARCH
-    driver.find_element(By.XPATH, "//button[contains(text(),'Search')]").click()
-    print("📊 Report generated", flush=True)
+    print("🌐 Opening Gmail...", flush=True)
+    driver.get("https://www.gmail.com")
 
     time.sleep(5)
 
-    # ⬇️ EXPORT
-    driver.find_element(By.XPATH, "//*[contains(text(),'Export')]").click()
-    time.sleep(2)
-
-    driver.find_element(By.XPATH, "//*[contains(text(),'Excel')]").click()
-
-    print("📂 Download triggered", flush=True)
+    print("✅ Gmail opened successfully", flush=True)
 
     driver.quit()
 
