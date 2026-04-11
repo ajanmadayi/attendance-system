@@ -5,17 +5,15 @@ import sys
 
 app = Flask(__name__)
 
-# ✅ Ensure UTF-8 logs
+# UTF-8 logs
 sys.stdout.reconfigure(encoding='utf-8')
 
 
-# ✅ Home page
 @app.route("/")
 def home():
     return render_template("index.html")
 
 
-# ✅ Run Playwright script and stream logs
 @app.route("/run-script")
 def run_script():
 
@@ -45,13 +43,11 @@ def run_script():
     return Response(generate(), mimetype="text/event-stream")
 
 
-# ✅ Health check (important for Render)
 @app.route("/health")
 def health():
     return "OK", 200
 
 
-# ✅ Local run (Render uses Gunicorn)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
