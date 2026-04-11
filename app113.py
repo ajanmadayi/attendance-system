@@ -7,9 +7,6 @@ sys.stdout.reconfigure(encoding='utf-8')
 USERNAME = "bhavani_khurja"
 PASSWORD = "Bhavani@123"
 
-# Ensure temp folder exists (Render safe)
-os.makedirs("/tmp", exist_ok=True)
-
 with sync_playwright() as p:
     print("🚀 Launching browser...", flush=True)
 
@@ -19,50 +16,54 @@ with sync_playwright() as p:
             "--no-sandbox",
             "--disable-dev-shm-usage",
             "--disable-gpu",
+            "--disable-setuid-sandbox",
             "--single-process"
         ]
     )
 
-    context = browser.new_context()
+    context = browser.new_context(
+        ignore_https_errors=True
+    )
+
     page = context.new_page()
 
     page.set_default_timeout(120000)
 
     print("🌐 Opening Login Page...", flush=True)
 
-    page.goto(
-        "http://203.92.32.167:8083/iclock/",
-        wait_until="load",
-        timeout=120000
-    )
+    try:
+        page.goto(
+            "http://203.92.32.167:8083/iclock/",
+            wait_until="domcontentloaded",
+            timeout=120000
+        )
+    except Exception as e:
+        print(f"❌ Page load error: {e}", flush=True)
 
-    # Take screenshot for debugging
-    screenshot_path = "/tmp/login_page.png"
-    page.screenshot(path=screenshot_path)
-    print(f"📸 Screenshot saved at: {screenshot_path}", flush=True)
+    # 🔥 Force wait for page content instead of load
+    page.wait_for_timeout(5000)
 
-    # Wait for login fields
-    page.wait_for_selector('input[type="text"]', timeout=60000)
-    page.wait_for_selector('input[type="password"]', timeout=60000)
+    # 🔥 Debug screenshot
+    page.screenshot(path="/tmp/debug.png")
+    print("📸 Screenshot saved", flush=True)
 
-    print("🔐 Entering credentials...", flush=True)
+    try:
+        page.wait_for_selector('input[type="text"]', timeout=60000)
+        page.wait_for_selector('input[type="password"]', timeout=60000)
 
-    page.fill('input[type="text"]', USERNAME)
-    page.fill('input[type="password"]', PASSWORD)
+        print("🔐 Entering credentials...", flush=True)
 
-    page.click('input[value="Login"]')
+        page.fill('input[type="text"]', USERNAME)
+        page.fill('input[type="password"]', PASSWORD)
 
-    print("⏳ Waiting after login...", flush=True)
-    page.wait_for_timeout(8000)
+        page.click('input[value="Login"]')
 
-    # Check login success
-    current_url = page.url
-    print(f"🌍 Current URL: {current_url}", flush=True)
+        page.wait_for_timeout(8000)
 
-    if "login" not in current_url.lower():
-        print("✅ LOGIN SUCCESS", flush=True)
-    else:
-        print("❌ LOGIN FAILED", flush=True)
+        print(f"🌍 Current URL: {page.url}", flush=True)
+
+    except Exception as e:
+        print(f"❌ Login error: {e}", flush=True)
 
     browser.close()
     print("🏁 DONE", flush=True)
