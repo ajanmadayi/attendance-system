@@ -5,32 +5,15 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return """
-    <html>
-    <head>
-        <title>Attendance System</title>
-        <style>
-            body { text-align:center; font-family: Arial; margin-top:100px; }
-            a {
-                padding:15px 25px;
-                background:green;
-                color:white;
-                text-decoration:none;
-                font-size:18px;
-                border-radius:5px;
-            }
-        </style>
-    </head>
-    <body>
-
-        <h2>Open Attendance System</h2>
-
-        <a href="http://203.92.32.167:8083/iclock/" target="_blank">
+    <h2 style='text-align:center;margin-top:100px;'>Open Attendance System</h2>
+    <div style='text-align:center;'>
+        <a href="http://203.92.32.167:8083/iclock/" target="_blank"
+           style="padding:15px 25px;background:green;color:white;
+                  text-decoration:none;font-size:18px;border-radius:5px;">
             Open System
         </a>
-
-    </body>
-    </html>
+    </div>
     """
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# 🔥 THIS LINE IS IMPORTANT FOR GUNICORN
+application = app
