@@ -4,8 +4,8 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# 🔥 REMOVE playwright from requirements OR ignore reinstall
-RUN pip install --no-cache-dir flask gunicorn pandas openpyxl
+# ✅ Install dependencies INCLUDING playwright (safe now)
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
