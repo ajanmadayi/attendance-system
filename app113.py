@@ -11,11 +11,11 @@ with sync_playwright() as p:
 
     browser = p.chromium.launch(
         headless=True,
-        channel="chrome",   # 🔥 IMPORTANT FIX
         args=[
             "--no-sandbox",
             "--disable-dev-shm-usage",
-            "--disable-gpu"
+            "--disable-gpu",
+            "--disable-setuid-sandbox"
         ]
     )
 
