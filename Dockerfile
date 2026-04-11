@@ -2,11 +2,13 @@ FROM mcr.microsoft.com/playwright/python:v1.58.0-jammy
 
 WORKDIR /app
 
+# 🔥 CRITICAL FIX
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 🔥 INSTALL ALL REQUIRED BROWSERS (CRITICAL)
 RUN playwright install
 
 COPY . .
