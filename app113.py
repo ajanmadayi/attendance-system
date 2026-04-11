@@ -15,7 +15,7 @@ try:
     driver = webdriver.Chrome(options=options)
 
     print("🌐 Opening Gmail...", flush=True)
-    driver.get("http://203.92.32.167:8083/iclock/")
+    driver.get("https://www.gmail.com")
 
     time.sleep(5)
 
