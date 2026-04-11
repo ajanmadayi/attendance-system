@@ -1,5 +1,3 @@
 flask
 gunicorn
-playwright
-pandas
-openpyxl
+selenium
