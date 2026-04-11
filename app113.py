@@ -1,168 +1,91 @@
 from playwright.sync_api import sync_playwright
-from datetime import datetime
+import time
 import os
-import sys
-import pandas as pd
 
-# UTF-8 output
-sys.stdout.reconfigure(encoding='utf-8')
+print("📅 Using From Date: 1", flush=True)
 
-# ---------------- CONFIG ----------------
-USERNAME = "bhavani_khurja"
-PASSWORD = "Bhavani@123"
-
-download_path = "/tmp/downloads"
-os.makedirs(download_path, exist_ok=True)
-
-UPLOAD_URL = "https://eportal.beplkhurja.in/uploadcsv.php"
-PIN = "1234"
-
-# ---------------- DATE ----------------
-today = datetime.now()
-day = today.day
-from_day = "1" if day <= 15 else "16"
-
-print(f"📅 Using From Date: {from_day}", flush=True)
-
-# ---------------- PLAYWRIGHT ----------------
-with sync_playwright() as p:
+try:
     print("🚀 Launching browser...", flush=True)
 
-    browser = p.chromium.launch(
-        headless=True,
-        args=[
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu"
-        ]
-    )
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--single-process"
+            ]
+        )
 
-    context = browser.new_context(accept_downloads=True)
-    page = context.new_page()
+        context = browser.new_context()
+        page = context.new_page()
 
-    page.set_default_timeout(120000)
+        # 🔥 OPEN LOGIN PAGE
+        print("🌐 Opening Login Page...", flush=True)
+        page.goto("http://203.92.32.167:8083/iclock/", timeout=60000)
 
-    # ---------------- LOGIN ----------------
-    print("🌐 Opening Login Page...", flush=True)
+        # 🔐 LOGIN
+        print("🔐 Entering credentials...", flush=True)
+        page.fill('input[name="username"]', "admin")
+        page.fill('input[name="password"]', "admin")  # change if needed
+        page.click('button[type="submit"]')
 
-    page.goto("http://203.92.32.167:8083/iclock/", timeout=120000)
+        page.wait_for_timeout(5000)
 
-    page.wait_for_selector('input[type="text"]')
+        print("✅ Login done", flush=True)
 
-    print("🔐 Entering credentials...", flush=True)
+        # 📊 CLICK LOG RECORDS
+        page.click("text=Log Records")
+        print("📊 Clicked Log Records", flush=True)
 
-    page.fill('input[type="text"]', USERNAME)
-    page.fill('input[type="password"]', PASSWORD)
-    page.click('input[value="Login"]')
+        page.wait_for_timeout(5000)
 
-    page.wait_for_timeout(8000)
+        # 🔍 SWITCH TO IFRAME (IMPORTANT)
+        iframe = page.frame_locator("iframe")
 
-    print("✅ Login done", flush=True)
+        print("✅ Report iframe found", flush=True)
 
-    # ---------------- MENU ----------------
-    print("📊 Opening Reports...", flush=True)
+        # 🔧 DEVICE FILTER
+        iframe.locator('input[placeholder="Search"]').fill("Bhavani")
+        iframe.locator("text=Bhavani").click()
 
-    page.hover("text=Reports")
-    page.click("text=Log Records")
-
-    page.wait_for_timeout(8000)
-
-    # ---------------- IFRAME ----------------
-    report_frame = None
-
-    for frame in page.frames:
-        try:
-            content = frame.content()
-            if content and ("log" in content.lower() or "report" in content.lower()):
-                report_frame = frame
-                print("✅ Report iframe found", flush=True)
-                break
-        except:
-            pass
-
-    if not report_frame:
-        print("❌ Report iframe not found", flush=True)
-        browser.close()
-        exit()
-
-    # ---------------- DEVICE FILTER ----------------
-    try:
-        report_frame.locator('input[type="checkbox"]').first.check()
         print("✅ Device filter enabled", flush=True)
-    except:
-        pass
 
-    # ---------------- SELECT BHAVANI ----------------
-    try:
-        for s in report_frame.locator("select").all():
-            options = s.locator("option").all_text_contents()
-            for opt in options:
-                if opt.lower().startswith("bhavani"):
-                    s.select_option(label=opt)
-                    print("✅ Selected Bhavani", flush=True)
-                    break
-    except:
-        pass
+        # 📅 SET DATE
+        iframe.locator('input[name="from_date"]').fill("1")
 
-    # ---------------- DATE ----------------
-    try:
-        for s in report_frame.locator("select").all():
-            values = s.locator("option").all_text_contents()
-            if "1" in values and "31" in values:
-                s.select_option(label=from_day)
-                print(f"📅 From Date set to {from_day}", flush=True)
-                break
-    except:
-        pass
+        print("📅 From Date set to 1", flush=True)
 
-    # ---------------- GENERATE ----------------
-    try:
-        report_frame.locator('input[value="Generate"]').click()
+        # 📊 GENERATE REPORT
+        iframe.locator("text=Search").click()
+
         print("📊 Report generated", flush=True)
-    except:
-        pass
 
-    page.wait_for_timeout(8000)
+        page.wait_for_timeout(5000)
 
-    # ---------------- EXPORT ----------------
-    print("⬇️ Exporting file...", flush=True)
+        # 🔄 REFRESH IFRAME
+        iframe = page.frame_locator("iframe")
+        print("🔄 Refreshing iframe...", flush=True)
 
-    with page.expect_download() as download_info:
-        report_frame.locator("text=Export").first.click()
+        # ⬇️ EXPORT
+        print("⬇️ Finding Export button...", flush=True)
+        iframe.locator("text=Export").click()
 
-    download = download_info.value
-    file_path = os.path.join(download_path, download.suggested_filename)
-    download.save_as(file_path)
+        page.wait_for_timeout(2000)
 
-    print(f"📂 Downloaded: {file_path}", flush=True)
+        iframe.locator("text=Excel").click()
 
-    # ---------------- CONVERT ----------------
-    month = datetime.now().strftime("%B").lower()
-    target_name = f"{month}1.csv" if from_day == "1" else f"{month}2.csv"
-    target_path = os.path.join(download_path, target_name)
+        print("⬇️ Selecting Excel...", flush=True)
 
-    if file_path.endswith((".xls", ".xlsx")):
-        df = pd.read_excel(file_path)
-        df.to_csv(target_path, index=False)
-        os.remove(file_path)
-        print("✅ Converted to CSV", flush=True)
-    else:
-        target_path = file_path
+        print("⏳ Waiting for download...", flush=True)
+        time.sleep(5)
 
-    # ---------------- UPLOAD ----------------
-    print("📤 Uploading...", flush=True)
+        print("📂 Download completed", flush=True)
 
-    page.goto(UPLOAD_URL)
-    page.wait_for_timeout(5000)
+        browser.close()
 
-    page.fill('input[name="pin"]', PIN)
-    page.set_input_files('input[name="csv_file"]', target_path)
-    page.click('input[name="upload"]')
-
-    page.wait_for_timeout(5000)
-
-    print("✅ Upload submitted", flush=True)
-
-    browser.close()
+except Exception as e:
+    print(f"❌ ERROR: {e}", flush=True)
 
 print("🏁 DONE", flush=True)

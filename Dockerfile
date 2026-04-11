@@ -2,14 +2,10 @@ FROM mcr.microsoft.com/playwright/python:v1.58.0-jammy
 
 WORKDIR /app
 
-# 🔥 CRITICAL FIX
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
-
-RUN playwright install
+# 🔥 REMOVE playwright from requirements OR ignore reinstall
+RUN pip install --no-cache-dir flask gunicorn pandas openpyxl
 
 COPY . .
 

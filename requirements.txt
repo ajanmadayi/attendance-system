@@ -1,6 +1,5 @@
 flask
 gunicorn
-playwright
 pandas
 openpyxl
 # force rebuild
